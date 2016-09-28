@@ -2,14 +2,12 @@
 from player import Player, PlayerTrainingPair
 from model import LinearRegressionModel, LogisticRegressionModel, RFRegressionModel
 from selector import TeamSelector, CompleteSelector
-from log import Log
-import sys
 from tools import Utils
 from datasource import NativeFplDataSource, CustomCsvDataSource
 import numpy as np
 import csv
 
-NUMBER_WEEKS_PREDICT = 3
+NUMBER_WEEKS_PREDICT = 1
 DEFAULT_LOG_LEVEL = 3
 
 
@@ -24,7 +22,7 @@ class Runner:
         self.output_prospects = output_prospects
 
         # setup logging
-        self.log.set_log_level(DEFAULT_LOG_LEVEL)
+        # self.log.set_log_level(DEFAULT_LOG_LEVEL)
         self.log.info("Initializing runner")
 
         # initialize player list
@@ -103,11 +101,14 @@ class Runner:
             player_features_for_week = player.features[gw].feature_vector
             team_features_for_week = player.team_features[gw+1]
             features_for_week = np.array(player_features_for_week + team_features_for_week)
-            label_for_week = player.labels[gw+1] if gw+1 in player.labels.keys() else None
-            if label_for_week is None:
-                player.log.warn("Unmatched feature vector for GW%s for player %s" % (gw, player))
+            label_for_week1 = player.labels[gw+1] if gw+1 in player.labels.keys() else None
+            label_for_week2 = player.labels[gw+1] if gw+1 in player.labels.keys() else None
+            label_for_week3 = player.labels[gw+1] if gw+1 in player.labels.keys() else None
+            labels_for_week = (label_for_week1, label_for_week2, label_for_week3)
+            if None in labels_for_week:
+                player.log.debug("No 3-match label available for GW% for player %s" % (gw, player))
             else:
-                player.training_data[gw+1] = PlayerTrainingPair(features_for_week, label_for_week, player.log)
+                player.training_data[gw+1] = PlayerTrainingPair(features_for_week, sum(labels_for_week), player.log)
 
     def _finalise_prediction_week(self, gw):
 
@@ -185,10 +186,10 @@ class Runner:
 
 if __name__ == "__main__":
     # out_log = Log(open("log", "a"))
-    out_log = Log(sys.stdout)
-    Runner(out_log, NativeFplDataSource(out_log), LinearRegressionModel(out_log), output_prospects=True).run()
+    out_log = Utils.get_logger()
+    # Runner(out_log, NativeFplDataSource(out_log), LinearRegressionModel(out_log), output_prospects=True).run()
     # Runner(out_log, NativeFplDataSource(out_log), LogisticRegressionModel(out_log), output_prospects=True).run()
-    # Runner(out_log, NativeFplDataSource(out_log), RFRegressionModel(out_log), output_prospects=True).run()
+    Runner(out_log, NativeFplDataSource(out_log), RFRegressionModel(out_log), output_prospects=True).run()
     # tot = 0
     # for wk in range(4, 39):
     # for wk in range(34, 35):
